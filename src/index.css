@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1d1c2d;
+  --color-accent: #ceff04;
+  --color-accent-hover: #bdf000;
+  
+  --color-bg-app: #ffffff;
+  --color-bg-card: #ffffff;
+  
+  --color-text-main: #1d1c2d;
+  --color-text-neutral: #64748b;
+  
+  --color-success: #16a34a;
+  --color-success-bg: rgba(22, 163, 74, 0.08);
+  
+  --color-danger: #dc2626;
+  --color-danger-bg: rgba(220, 38, 38, 0.08);
+  
+  --color-buy-text: #2563eb;
+  --color-buy-bg: rgba(59, 130, 246, 0.1);
+  
+  --color-sell-text: #dc2626;
+  --color-sell-bg: rgba(239, 68, 68, 0.1);
+  
+  --color-border-light: #f1f5f9;
+  --color-border-dark: #334155;
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #e2e8f0;
+    border-radius: 20px;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #475569;
+  }
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
+}

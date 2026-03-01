@@ -1,0 +1,36 @@
+export interface Trade {
+  id: string;
+  category: 'FOREX' | 'ACCIONES' | 'COMMODITIES';
+  status: 'HISTÓRICO' | 'EN CURSO';
+  tags: string;
+  ticket: string;
+  openDate: string;
+  closeDate: string;
+  symbol: string;
+  action: string;
+  unitsLots: number;
+  sl: number;
+  tp: number;
+  openPrice: number;
+  closePrice: number;
+  commission: number;
+  swap: number;
+  pips: number;
+  profit: number;
+  gain: number;
+  comment: string;
+  magicNumber: string;
+  duration: string;
+  profitablePercent: number;
+  profitableTimeDuration: string;
+  drawdown: number;
+  riskReward: number | string;
+  maxPips: number;
+  maxUsd: number;
+  minPips: number;
+  minUsd: number;
+  entryAccuracy: number;
+  exitAccuracy: number;
+  profitMissedPips: number;
+  profitMissedUsd: number;
+}
