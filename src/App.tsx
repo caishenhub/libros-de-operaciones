@@ -40,7 +40,10 @@ export default function App() {
       setError(null);
       
       // Ahora consultamos a nuestro propio servidor (proxy) para evitar problemas de CORS
-      const response = await fetch('/api/trades');
+      const apiUrl = '/api/trades';
+      console.log(`Fetching from: ${apiUrl}`);
+      const response = await fetch(apiUrl);
+      console.log(`Response status: ${response.status}`);
 
       if (response.ok) {
         const data = await response.json();

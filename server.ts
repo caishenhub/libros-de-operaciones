@@ -12,23 +12,31 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
+  // Health check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", time: new Date().toISOString() });
+  });
+
   // API Proxy para Google Apps Script (Bypass CORS)
   app.get("/api/trades", async (req, res) => {
+    console.log(`[${new Date().toISOString()}] Incoming request to /api/trades`);
     try {
       const appsScriptUrl = process.env.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzthYRRwNWmTJ3gU5R6lHL_Fn0CZk8AYozllfcz-bEyOHVzMPzXnYN9xBPAq3tubyyj/exec';
       
-      console.log(`Fetching trades from: ${appsScriptUrl}`);
+      console.log(`[${new Date().toISOString()}] Proxying to: ${appsScriptUrl}`);
       
       const response = await fetch(appsScriptUrl);
+      console.log(`[${new Date().toISOString()}] Google API status: ${response.status}`);
       
       if (!response.ok) {
         throw new Error(`Google API responded with status: ${response.status}`);
       }
       
       const data = await response.json();
+      console.log(`[${new Date().toISOString()}] Successfully fetched ${Array.isArray(data) ? data.length : 'non-array'} items`);
       res.json(data);
     } catch (error) {
-      console.error("Error in /api/trades proxy:", error);
+      console.error(`[${new Date().toISOString()}] Error in /api/trades proxy:`, error);
       res.status(500).json({ 
         error: "Error al obtener datos de la Nube Institucional",
         details: error instanceof Error ? error.message : String(error)
