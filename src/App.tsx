@@ -103,7 +103,7 @@ export default function App() {
           </div>
           <div className="min-w-0 flex-grow">
             <h1 className="text-base md:text-2xl font-bold tracking-tight text-primary uppercase leading-tight truncate">
-              Libro de Operaciones
+              Libro de Operaciones Caishen Capital Group
             </h1>
             <p className="text-[8px] md:text-[11px] font-semibold tracking-[0.05em] md:tracking-[0.1em] text-slate-500 uppercase opacity-80 truncate">
               Verificación Institucional • Caishen Capital
