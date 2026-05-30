@@ -28,6 +28,13 @@ async function startServer() {
         process.env.VITE_APPS_SCRIPT_URL_ACCIONES
       ].filter((val, index, self) => val && self.indexOf(val) === index) as string[];
 
+      if (urls.length === 0) {
+        return res.status(400).json({
+          error: "Variables de entorno no configuradas",
+          details: "No se han configurado las URLs de Google Apps Script. Por favor, añada 'VITE_APPS_SCRIPT_URL_FOREX', 'VITE_APPS_SCRIPT_URL_COMMODITIES' o 'VITE_APPS_SCRIPT_URL_ACCIONES' en el panel de su hosting de producción (como Vercel)."
+        });
+      }
+
       console.log(`[${new Date().toISOString()}] Parallel proxying to ${urls.length} URLs:`, urls);
 
       const fetchPromises = urls.map(async (url) => {
