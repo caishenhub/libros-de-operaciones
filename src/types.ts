@@ -1,6 +1,6 @@
 export interface Trade {
   id: string;
-  category: 'FOREX' | 'ACCIONES' | 'COMMODITIES';
+  category: 'FOREX' | 'COMMODITIES' | 'ACCIONES';
   status: 'HISTÓRICO' | 'EN CURSO';
   tags: string;
   ticket: string;

@@ -17,33 +17,33 @@ import {
 } from 'lucide-react';
 import { mockTrades } from './data/mockTrades';
 import { Trade } from './types';
+import CustomDatePicker, { DateRange, PresetType } from './components/CustomDatePicker';
 
 export default function App() {
   const [trades, setTrades] = useState<Trade[]>(mockTrades);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Cambiado a false porque ya tenemos mockTrades
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
-  const [activeMenu, setActiveMenu] = useState<'FOREX' | 'ACCIONES' | 'COMMODITIES'>('FOREX');
-  const [viewType, setViewType] = useState<'HISTÓRICO' | 'EN CURSO'>('HISTÓRICO');
+  const [selectedRange, setSelectedRange] = useState<DateRange>({ start: null, end: null });
+  const [selectedPreset, setSelectedPreset] = useState<PresetType>('all');
+  const [activeMenu, setActiveMenu] = useState<'FOREX' | 'COMMODITIES' | 'ACCIONES'>('FOREX');
   const [currentPage, setCurrentPage] = useState(1);
   const ROWS_PER_PAGE = 40;
 
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, dateFilter, activeMenu, viewType]);
+  }, [searchTerm, selectedRange, selectedPreset, activeMenu]);
 
-  const fetchTrades = async () => {
+  const fetchTrades = async (isRefresh = false) => {
     try {
+      if (!isRefresh) setIsInitialLoad(true);
       setIsLoading(true);
       setError(null);
       
-      // Ahora consultamos a nuestro propio servidor (proxy) para evitar problemas de CORS
       const apiUrl = '/api/trades';
-      console.log(`Fetching from: ${apiUrl}`);
       const response = await fetch(apiUrl);
-      console.log(`Response status: ${response.status}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -63,6 +63,7 @@ export default function App() {
       setError(error instanceof Error ? error.message : 'Error de conexión con el servidor proxy.');
     } finally {
       setIsLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
@@ -70,18 +71,101 @@ export default function App() {
     fetchTrades();
   }, []);
 
+  const SkeletonRow = () => (
+    <tr className="animate-pulse border-b border-slate-50">
+      <td className="px-5 py-4"><div className="h-3 w-16 bg-slate-100 rounded"></div></td>
+      <td className="px-5 py-4"><div className="h-3 w-24 bg-slate-100 rounded"></div></td>
+      <td className="px-5 py-4"><div className="h-3 w-24 bg-slate-100 rounded"></div></td>
+      <td className="px-5 py-4"><div className="h-3 w-12 bg-slate-100 rounded font-bold"></div></td>
+      <td className="px-5 py-4"><div className="h-5 w-12 bg-slate-100 rounded-lg"></div></td>
+      <td className="px-5 py-4"><div className="h-3 w-10 bg-slate-100 rounded ml-auto"></div></td>
+      <td className="px-5 py-4"><div className="h-3 w-10 bg-slate-100 rounded ml-auto"></div></td>
+      <td className="px-5 py-4"><div className="h-3 w-14 bg-slate-100 rounded ml-auto"></div></td>
+      <td className="px-5 py-4"><div className="h-3 w-14 bg-slate-100 rounded ml-auto"></div></td>
+      <td className="px-5 py-4"><div className="h-3 w-10 bg-slate-100 rounded ml-auto"></div></td>
+      <td className="px-5 py-4"><div className="h-5 w-12 bg-slate-100 rounded-md ml-auto"></div></td>
+      <td className="px-5 py-4"><div className="h-5 w-12 bg-slate-100 rounded-md ml-auto"></div></td>
+      <td className="px-5 py-4"><div className="h-5 w-12 bg-slate-100 rounded-md ml-auto"></div></td>
+      <td className="px-5 py-4"><div className="h-3 w-16 bg-slate-100 rounded"></div></td>
+    </tr>
+  );
+
+  const SkeletonCard = () => (
+    <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm animate-pulse">
+      <div className="flex justify-between items-start mb-3">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-16 bg-slate-100 rounded"></div>
+            <div className="h-4 w-10 bg-slate-100 rounded"></div>
+          </div>
+          <div className="h-3 w-12 bg-slate-100 rounded"></div>
+        </div>
+        <div className="space-y-2 text-right">
+          <div className="h-4 w-12 bg-slate-100 rounded ml-auto"></div>
+          <div className="h-3 w-10 bg-slate-100 rounded ml-auto"></div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-y-3 gap-x-4 pt-3 border-t border-slate-50">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i}>
+            <div className="h-2 w-10 bg-slate-50 rounded mb-1"></div>
+            <div className="h-3 w-20 bg-slate-100 rounded"></div>
+          </div>
+        ))}
+        <div className="col-span-2 bg-slate-50 p-2 rounded-lg flex justify-between">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-4 w-8 bg-slate-200 rounded"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // helper to parse MM/DD/YYYY HH:mm to Date object
+  const parseTradeDate = (dateStr: string): Date | null => {
+    if (!dateStr || dateStr === '-') return null;
+    const parts = dateStr.split(' ');
+    const dateParts = parts[0].split('/');
+    if (dateParts.length !== 3) return null;
+    
+    const month = parseInt(dateParts[0], 10) - 1;
+    const day = parseInt(dateParts[1], 10);
+    const year = parseInt(dateParts[2], 10);
+    
+    let hours = 0;
+    let minutes = 0;
+    if (parts[1]) {
+      const timeParts = parts[1].split(':');
+      hours = parseInt(timeParts[0], 10) || 0;
+      minutes = parseInt(timeParts[1], 10) || 0;
+    }
+    
+    return new Date(year, month, day, hours, minutes);
+  };
+
   const filteredTrades = trades.filter(trade => {
     const matchesSearch = trade.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          trade.ticket.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDate = !dateFilter || (() => {
-      // dateFilter is YYYY-MM-DD
-      // trade.openDate is MM/DD/YYYY HH:mm
-      const [year, month, day] = dateFilter.split('-');
-      const formattedFilter = `${month}/${day}/${year}`;
-      return trade.openDate.startsWith(formattedFilter);
+    
+    const matchesDate = (() => {
+      if (selectedPreset === 'all') return true;
+      
+      const tradeDate = parseTradeDate(trade.openDate);
+      if (!tradeDate) return false;
+
+      const start = selectedRange.start;
+      const end = selectedRange.end;
+
+      if (start && end) {
+        return tradeDate >= start && tradeDate <= end;
+      } else if (start) {
+        return tradeDate >= start;
+      }
+      return true;
     })();
+
     const matchesCategory = trade.category === activeMenu;
-    const matchesStatus = trade.status === viewType;
+    const matchesStatus = !trade.status || trade.status === 'HISTÓRICO';
     
     return matchesSearch && matchesDate && matchesCategory && matchesStatus;
   });
@@ -124,17 +208,6 @@ export default function App() {
             FOREX
           </button>
           <button 
-            onClick={() => setActiveMenu('ACCIONES')}
-            className={`flex items-center justify-center gap-2 px-4 md:px-6 py-2 rounded-xl text-[10px] md:text-xs font-bold transition-all whitespace-nowrap flex-1 md:flex-none ${
-              activeMenu === 'ACCIONES' 
-                ? 'bg-accent text-primary shadow-sm' 
-                : 'text-slate-500 hover:text-primary hover:bg-slate-50'
-            }`}
-          >
-            <CandlestickChart size={14} className="md:w-[16px] md:h-[16px]" />
-            ACCIONES
-          </button>
-          <button 
             onClick={() => setActiveMenu('COMMODITIES')}
             className={`flex items-center justify-center gap-2 px-4 md:px-6 py-2 rounded-xl text-[10px] md:text-xs font-bold transition-all whitespace-nowrap flex-1 md:flex-none ${
               activeMenu === 'COMMODITIES' 
@@ -145,54 +218,34 @@ export default function App() {
             <LinkIcon size={14} className="md:w-[16px] md:h-[16px]" />
             COMMODITIES
           </button>
+          <button 
+            onClick={() => setActiveMenu('ACCIONES')}
+            className={`flex items-center justify-center gap-2 px-4 md:px-6 py-2 rounded-xl text-[10px] md:text-xs font-bold transition-all whitespace-nowrap flex-1 md:flex-none ${
+              activeMenu === 'ACCIONES' 
+                ? 'bg-accent text-primary shadow-sm' 
+                : 'text-slate-500 hover:text-primary hover:bg-slate-50'
+            }`}
+          >
+            <CandlestickChart size={14} className="md:w-[16px] md:h-[16px]" />
+            ACCIONES
+          </button>
         </nav>
       </header>
 
       {/* Main Content */}
-      <main className="w-full max-w-[1600px] mx-auto bg-white rounded-2xl md:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden flex flex-col flex-grow">
+      <main className="w-full max-w-[1600px] mx-auto bg-white rounded-2xl md:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden flex flex-col flex-grow relative">
+        
+        {/* Loading Bar */}
+        {isLoading && !isInitialLoad && (
+          <div className="absolute top-0 left-0 right-0 h-1 z-50 overflow-hidden">
+            <div className="h-full bg-accent animate-progress origin-left"></div>
+          </div>
+        )}
         
         {/* Toolbar */}
-        <div className="p-4 md:p-8 border-b border-slate-100 flex flex-col gap-4 md:gap-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="bg-slate-50 p-1 rounded-xl md:rounded-2xl flex items-center w-full md:w-auto border border-slate-100">
-              <button 
-                onClick={() => setViewType('HISTÓRICO')}
-                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-8 py-2.5 md:py-3 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition-all ${
-                  viewType === 'HISTÓRICO'
-                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                    : 'text-slate-500 hover:text-primary'
-                }`}
-              >
-                <History size={14} className="md:w-[16px] md:h-[16px]" />
-                HISTÓRICO
-              </button>
-              <button 
-                onClick={() => setViewType('EN CURSO')}
-                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-8 py-2.5 md:py-3 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold transition-all ${
-                  viewType === 'EN CURSO'
-                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                    : 'text-slate-500 hover:text-primary'
-                }`}
-              >
-                <TrendingUp size={14} className="md:w-[16px] md:h-[16px]" />
-                EN CURSO
-              </button>
-            </div>
-
-            <button 
-              onClick={() => fetchTrades()}
-              disabled={isLoading}
-              className={`flex md:hidden items-center justify-center gap-2 w-full px-5 py-3 border border-slate-200 rounded-xl bg-white shadow-sm transition-all active:scale-95 disabled:opacity-50 ${isLoading ? 'animate-pulse' : ''}`}
-            >
-              <span className={`h-2 w-2 bg-accent rounded-full ${isLoading ? 'animate-spin' : 'animate-pulse'} shadow-[0_0_8px_#ceff04]`}></span>
-              <span className="text-[10px] font-bold text-primary tracking-wide">
-                {isLoading ? 'SINCRONIZANDO...' : 'SINCRONIZAR NUBE'}
-              </span>
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-3 md:gap-4 w-full">
-            <div className="relative flex-grow lg:max-w-md">
+        <div className="p-4 md:p-8 border-b border-slate-100 focus-within:z-10">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 w-full">
+            <div className="relative flex-grow sm:max-w-md">
               <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <Search className="text-slate-400" size={18} />
               </span>
@@ -202,39 +255,26 @@ export default function App() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                id="search_trades_input"
               />
             </div>
 
-            <div className="relative flex-grow lg:w-48">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                {dateFilter ? (
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setDateFilter('');
-                    }}
-                    className="pointer-events-auto text-slate-400 hover:text-primary transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                ) : (
-                  <Calendar className="text-slate-400" size={14} />
-                )}
-              </span>
-              <input 
-                className="block w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl md:rounded-2xl leading-5 bg-white text-primary placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent text-xs md:text-sm font-medium transition-all" 
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-              />
-            </div>
+            <CustomDatePicker
+              onDateChange={(range, preset) => {
+                setSelectedRange(range);
+                setSelectedPreset(preset);
+              }}
+              selectedPreset={selectedPreset}
+              selectedRange={selectedRange}
+            />
 
             <button 
-              onClick={() => fetchTrades()}
+              onClick={() => fetchTrades(true)}
               disabled={isLoading}
-              className={`hidden md:flex items-center gap-2.5 px-5 py-3 border border-slate-200 rounded-2xl bg-white shadow-sm transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${isLoading ? 'animate-pulse' : ''}`}
+              className={`flex items-center justify-center gap-2.5 px-5 py-3 border border-slate-200 rounded-xl md:rounded-2xl bg-white shadow-sm transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto sm:ml-auto shrink-0 ${isLoading ? 'animate-pulse' : ''}`}
+              id="sync_cloud_button_unified"
             >
-              <span className={`h-2.5 w-2.5 bg-accent rounded-full ${isLoading ? 'animate-spin' : 'animate-pulse'} shadow-[0_0_10px_#ceff04]`}></span>
+              <span className={`h-2 w-2 md:h-2.5 md:w-2.5 bg-accent rounded-full ${isLoading ? 'animate-spin' : 'animate-pulse'} shadow-[0_0_10px_#ceff04]`}></span>
               <span className="text-xs font-bold text-primary tracking-wide">
                 {isLoading ? 'SINCRONIZANDO...' : 'NUBE INSTITUCIONAL'}
               </span>
@@ -266,17 +306,8 @@ export default function App() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-50">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={14} className="px-8 py-24 text-center">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="w-10 h-10 border-4 border-accent border-t-primary rounded-full animate-spin"></div>
-                        <p className="text-xs font-bold text-primary tracking-widest uppercase animate-pulse">
-                          Sincronizando con Nube Institucional...
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
+                {isInitialLoad ? (
+                  Array.from({ length: 10 }).map((_, i) => <SkeletonRow key={i} />)
                 ) : error ? (
                   <tr>
                     <td colSpan={14} className="px-8 py-24 text-center">
@@ -289,7 +320,7 @@ export default function App() {
                           No se pudo conectar con la Nube Institucional. Esto puede deberse a la configuración de permisos del Apps Script o a un problema de red.
                         </p>
                         <button 
-                          onClick={() => fetchTrades()}
+                          onClick={() => fetchTrades(true)}
                           className="mt-4 px-6 py-2.5 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
                         >
                           Reintentar Conexión
@@ -346,15 +377,8 @@ export default function App() {
 
           {/* Mobile Card View */}
           <div className="md:hidden h-full overflow-auto p-4 space-y-4 custom-scrollbar">
-            {isLoading ? (
-              <div className="py-12 text-center">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-8 h-8 border-3 border-accent border-t-primary rounded-full animate-spin"></div>
-                  <p className="text-[10px] font-bold text-primary tracking-widest uppercase animate-pulse">
-                    Sincronizando...
-                  </p>
-                </div>
-              </div>
+            {isInitialLoad ? (
+              Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
             ) : error ? (
               <div className="py-8 text-center px-4">
                 <div className="w-10 h-10 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -365,7 +389,7 @@ export default function App() {
                   No se pudo conectar con la Nube Institucional.
                 </p>
                 <button 
-                  onClick={() => fetchTrades()}
+                  onClick={() => fetchTrades(true)}
                   className="w-full py-3 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-slate-200"
                 >
                   Reintentar
